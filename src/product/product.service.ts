@@ -6,11 +6,12 @@ import {
 import { Product } from './entities/Product';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductDto } from './dtos/Product.dto';
+import { Repository } from 'typeorm';
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product)
-    private productRepository,
+    private productRepository: Repository<Product>,
   ) {}
 
   async create(product: ProductDto): Promise<Product> {
@@ -32,17 +33,46 @@ export class ProductService {
     return newProduct;
   }
 
-  async showOne(id:string): Promise<Product>{
-    const foundProduct = await this.productRepository.findOne({
-        where:id,
-     });
-     if (!foundProduct) {
-        throw new NotFoundException('product not found');
-     }
-     return foundProduct;
+  async get(
+    name: string,
+    price: string,
+    seller: string,
+    brand: string,
+  ): Promise<Product[]> {
+    const queryBuilder = this.productRepository.createQueryBuilder('products');
+    if (name) {
+      queryBuilder.andWhere('products.name like :name', { name: `%${name}%` });
+    }
+    if (brand) {
+      queryBuilder.andWhere('products.brand like :brand', {
+        brand: `%${brand}%`,
+      });
+    }
+    if (price) {
+      queryBuilder.andWhere('products.price = :price', { price: price });
+    }
+    if (seller) {
+      queryBuilder.andWhere('products.seller like :seller', {
+        seller: `%${seller}%`,
+      });
+    }
+    const products = await queryBuilder.getMany();
+    return products;
   }
 
-  async update(product: ProductDto, id: string): Promise<Product> {
+  async showOne(id: number): Promise<Product> {
+    const foundProduct = await this.productRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
+    if (!foundProduct) {
+      throw new NotFoundException('product not found');
+    }
+    return foundProduct;
+  }
+
+  async update(product: ProductDto, id: number): Promise<Product> {
     const foundProduct = await this.productRepository.findOne({
       where: {
         name: product.name,
@@ -65,7 +95,7 @@ export class ProductService {
     return updatedProduct;
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: number): Promise<void> {
     const foundProduct = await this.productRepository.findOne({
       where: {
         id: id,
@@ -74,7 +104,6 @@ export class ProductService {
     if (!foundProduct) {
       throw new NotFoundException('product not found');
     }
-    await this.productRepository.remove(id);
-    return foundProduct;
+    await this.productRepository.remove(foundProduct);
   }
 }
