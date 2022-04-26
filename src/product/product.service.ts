@@ -1,69 +1,80 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Product } from './entities/Product';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductDto } from './dtos/Product.dto';
-import { MetadataAlreadyExistsError } from 'typeorm';
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product)
     private productRepository,
-  ) {
-   
-  }
+  ) {}
 
-  async create(product:ProductDto):Promise<Product>{
-    const {name,brand,price,seller} = product;
+  async create(product: ProductDto): Promise<Product> {
+    const { name, brand, price, seller } = product;
     const foundProduct = await this.productRepository.findOne({
-        where:{
-            name:name
-        }
-    })
-    if(foundProduct){
-        throw new ConflictException("Product Already exists");
+      where: {
+        name: name,
+      },
+    });
+    if (foundProduct) {
+      throw new ConflictException('Product Already exists');
     }
     const newProduct = await this.productRepository.save({
-        name,
-        brand,
-        price,
-        seller
-    })
+      name,
+      brand,
+      price,
+      seller,
+    });
     return newProduct;
   }
 
-  async update(product:ProductDto, id:string):Promise<Product>{
+  async showOne(id:string): Promise<Product>{
     const foundProduct = await this.productRepository.findOne({
-        where:{
-            name:product.name
-        }
-    })
-    if(foundProduct){
-        throw new ConflictException("Product Already exists");
+        where:id,
+     });
+     if (!foundProduct) {
+        throw new NotFoundException('product not found');
+     }
+     return foundProduct;
+  }
+
+  async update(product: ProductDto, id: string): Promise<Product> {
+    const foundProduct = await this.productRepository.findOne({
+      where: {
+        name: product.name,
+      },
+    });
+    if (foundProduct) {
+      throw new ConflictException('Product Already exists');
     }
 
-   await this.productRepository.update(id,{
-       ...product
-   })
+    await this.productRepository.update(id, {
+      ...product,
+    });
 
-   const updatedProduct = await this.productRepository.findOne({
-       where:{
-           id:id
-       }
-   });
+    const updatedProduct = await this.productRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
 
     return updatedProduct;
   }
 
-  async delete(id:string):Promise<void>{
+  async delete(id: string): Promise<void> {
     const foundProduct = await this.productRepository.findOne({
-        where:{
-            id:id
-        }
+      where: {
+        id: id,
+      },
     });
-    if(!foundProduct){
-        throw new NotFoundException("product not found")
+    if (!foundProduct) {
+      throw new NotFoundException('product not found');
     }
-   await this.productRepository.remove(id)
+    await this.productRepository.remove(id);
     return foundProduct;
   }
 }
