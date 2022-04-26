@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Product } from './entities/Product';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductDto } from './dtos/Product.dto';
@@ -34,18 +34,36 @@ export class ProductService {
   async update(product:ProductDto, id:string):Promise<Product>{
     const foundProduct = await this.productRepository.findOne({
         where:{
-            name:name
+            name:product.name
         }
     })
     if(foundProduct){
         throw new ConflictException("Product Already exists");
     }
 
-   const updatedProduct = await this.productRepository.save({
-        ...product,
-        id:id
-    })
+   await this.productRepository.update(id,{
+       ...product
+   })
+
+   const updatedProduct = await this.productRepository.findOne({
+       where:{
+           id:id
+       }
+   });
 
     return updatedProduct;
+  }
+
+  async delete(id:string):Promise<void>{
+    const foundProduct = await this.productRepository.findOne({
+        where:{
+            id:id
+        }
+    });
+    if(!foundProduct){
+        throw new NotFoundException("product not found")
+    }
+   await this.productRepository.remove(id)
+    return foundProduct;
   }
 }
